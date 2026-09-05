@@ -9,7 +9,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "deploy": "astro build && npx gh-pages -d dist -b gh-pages",
+    "deploy": "astro build && npx gh-pages -d dist -b gh-pages -t",
     "astro": "astro"
   },
   "dependencies": {
