@@ -1,0 +1,72 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DiaryEntry from '../../components/DiaryEntry.astro';
+import Navigation from '../../components/Navigation.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('diary');
+  
+  // Sort by date
+  const sorted = entries.sort((a, b) => a.data.date.localeCompare(b.data.date));
+
+  return sorted.map((entry, index) => {
+    const prev = sorted[index - 1];
+    const next = sorted[index + 1];
+
+    return {
+      params: { slug: entry.data.date },
+      props: {
+        entry,
+        prevDate: prev?.data.date,
+        prevTitle: prev?.data.title,
+        nextDate: next?.data.date,
+        nextTitle: next?.data.title,
+      },
+    };
+  });
+}
+
+const { entry, prevDate, prevTitle, nextDate, nextTitle } = Astro.props;
+const { Content } = await entry.render();
+
+
+---
+
+<BaseLayout title={`${entry.data.title} — Daily Teacher Diary`}>
+  <Navigation
+    prevDate={prevDate}
+    prevTitle={prevTitle}
+    nextDate={nextDate}
+    nextTitle={nextTitle}
+  />
+
+  <DiaryEntry
+    title={entry.data.title}
+    date={entry.data.date}
+    day={entry.data.day}
+    periods={entry.data.periods}
+    homework_given={entry.data.homework_given}
+    general_notes={entry.data.general_notes}
+  />
+
+  {entry.body && entry.body.trim().length > 0 && (
+    <div class="diary-entry" style="margin-top: 0; border-top: none;">
+      <div class="diary-entry-body">
+        <div class="notes-section" style="border-top: none; margin-top: 0; padding-top: 0;">
+          <h3>📓 Additional Notes</h3>
+          <div class="prose">
+            <Content />
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  <Navigation
+    prevDate={prevDate}
+    prevTitle={prevTitle}
+    nextDate={nextDate}
+    nextTitle={nextTitle}
+  />
+</BaseLayout>

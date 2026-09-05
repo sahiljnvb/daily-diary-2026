@@ -1,0 +1,28 @@
+---
+interface Props {
+  prevDate?: string;
+  prevTitle?: string;
+  nextDate?: string;
+  nextTitle?: string;
+}
+
+const { prevDate, prevTitle, nextDate, nextTitle } = Astro.props;
+---
+
+<nav class="diary-nav">
+  {prevDate ? (
+    <a href={`${import.meta.env.BASE_URL}diary/${prevDate}/`}>
+      ← {prevTitle || prevDate}
+    </a>
+  ) : (
+    <span></span>
+  )}
+  <div class="nav-spacer"></div>
+  {nextDate ? (
+    <a href={`${import.meta.env.BASE_URL}diary/${nextDate}/`}>
+      {nextTitle || nextDate} →
+    </a>
+  ) : (
+    <span></span>
+  )}
+</nav>

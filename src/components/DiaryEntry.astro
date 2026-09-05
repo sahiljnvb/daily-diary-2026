@@ -1,0 +1,75 @@
+---
+interface Period {
+  period: number;
+  class_name: string;
+  subject: string;
+  topic: string;
+  remarks?: string;
+}
+
+interface Props {
+  title: string;
+  date: string;
+  day: string;
+  periods?: Period[];
+  homework_given?: string;
+  general_notes?: string;
+  body?: string;
+}
+
+const { title, date, day, periods, homework_given, general_notes, body } = Astro.props;
+---
+
+<article class="diary-entry">
+  <div class="diary-entry-header">
+    <h2>{title}</h2>
+    <div class="diary-entry-date">{day}, {date}</div>
+  </div>
+  <div class="diary-entry-body">
+    {periods && periods.length > 0 && (
+      <table class="period-table">
+        <thead>
+          <tr>
+            <th>Period</th>
+            <th>Class</th>
+            <th>Subject</th>
+            <th>Topic Covered</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {periods.map((p) => (
+            <tr>
+              <td class="period-number" data-label="Period">{p.period}</td>
+              <td data-label="Class">{p.class_name}</td>
+              <td data-label="Subject">{p.subject}</td>
+              <td data-label="Topic">{p.topic}</td>
+              <td data-label="Remarks">{p.remarks || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+
+    {homework_given && (
+      <div class="notes-section">
+        <h3>📝 Homework Given</h3>
+        <p>{homework_given}</p>
+      </div>
+    )}
+
+    {general_notes && (
+      <div class="notes-section">
+        <h3>📌 General Notes</h3>
+        <p>{general_notes}</p>
+      </div>
+    )}
+
+    {body && (
+      <div class="notes-section">
+        <h3>📓 Additional Notes</h3>
+        <div class="prose" set:html={body} />
+      </div>
+    )}
+  </div>
+</article>

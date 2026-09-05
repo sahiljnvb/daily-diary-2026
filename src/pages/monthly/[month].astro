@@ -1,0 +1,133 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CalendarGrid from '../../components/CalendarGrid.astro';
+import { getCollection } from 'astro:content';
+
+const monthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+export async function getStaticPaths() {
+  const academicMonths = [
+    { year: 2026, month: 3 },
+    { year: 2026, month: 4 },
+    { year: 2026, month: 5 },
+    { year: 2026, month: 6 },
+    { year: 2026, month: 7 },
+    { year: 2026, month: 8 },
+    { year: 2026, month: 9 },
+    { year: 2026, month: 10 },
+    { year: 2026, month: 11 },
+    { year: 2027, month: 0 },
+    { year: 2027, month: 1 },
+    { year: 2027, month: 2 },
+  ];
+
+  return academicMonths.map(({ year, month }) => {
+    const monthStr = String(month + 1).padStart(2, '0');
+    return {
+      params: { month: `${year}-${monthStr}` },
+      props: { year, month },
+    };
+  });
+}
+
+const { year, month } = Astro.props;
+
+const allEntries = await getCollection('diary');
+const entryDates = new Set(allEntries.map((e) => e.data.date));
+
+// Filter entries for this month
+const monthEntries = allEntries
+  .filter((e) => {
+    const d = new Date(e.data.date);
+    return d.getFullYear() === year && d.getMonth() === month;
+  })
+  .sort((a, b) => a.data.date.localeCompare(b.data.date));
+
+const now = new Date();
+const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+const totalPeriods = monthEntries.reduce((sum, e) => sum + (e.data.periods?.length || 0), 0);
+
+// Navigation
+const academicMonths = [
+  { year: 2026, month: 3 },
+  { year: 2026, month: 4 },
+  { year: 2026, month: 5 },
+  { year: 2026, month: 6 },
+  { year: 2026, month: 7 },
+  { year: 2026, month: 8 },
+  { year: 2026, month: 9 },
+  { year: 2026, month: 10 },
+  { year: 2026, month: 11 },
+  { year: 2027, month: 0 },
+  { year: 2027, month: 1 },
+  { year: 2027, month: 2 },
+];
+---
+
+<BaseLayout title={`${monthNames[month]} ${year} — Daily Teacher Diary`}>
+  <h1 class="page-title">📅 {monthNames[month]} {year}</h1>
+
+  <!-- Month Navigation -->
+  <div class="month-nav">
+    {academicMonths.map(({ year: y, month: m }) => {
+      const ms = String(m + 1).padStart(2, '0');
+      const slug = `${y}-${ms}`;
+      const isActive = y === year && m === month;
+      return (
+        <a href={`${import.meta.env.BASE_URL}monthly/${slug}/`} class={isActive ? 'active' : ''}>
+          {monthNames[m].substring(0, 3)} {y === 2027 ? "'27" : "'26"}
+        </a>
+      );
+    })}
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" style="margin-bottom: 1.5rem;">
+    <div class="stat-card">
+      <div class="stat-number">{monthEntries.length}</div>
+      <div class="stat-label">Entries</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">{totalPeriods}</div>
+      <div class="stat-label">Periods Logged</div>
+    </div>
+  </div>
+
+  <!-- Calendar -->
+  <div style="max-width: 350px; margin-bottom: 2rem;">
+    <CalendarGrid
+      year={year}
+      month={month}
+      entryDates={entryDates}
+      today={todayStr}
+    />
+  </div>
+
+  <!-- Entry List -->
+  {monthEntries.length > 0 ? (
+    <ul class="monthly-list">
+      {monthEntries.map((entry) => (
+        <li>
+          <a href={`${import.meta.env.BASE_URL}diary/${entry.data.date}/`}>
+            <div class="entry-date">{entry.data.title}</div>
+            <div class="entry-summary">
+              {entry.data.periods ? `${entry.data.periods.length} period(s)` : 'No periods'}
+              {entry.data.periods && entry.data.periods.length > 0 &&
+                ` · ${entry.data.periods.map(p => p.class_name).join(', ')}`
+              }
+            </div>
+          </a>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <div class="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <p>No entries for {monthNames[month]} {year} yet.</p>
+    </div>
+  )}
+</BaseLayout>

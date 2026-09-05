@@ -1,0 +1,41 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CalendarGrid from '../components/CalendarGrid.astro';
+import { getCollection } from 'astro:content';
+
+const allEntries = await getCollection('diary');
+const entryDates = new Set(allEntries.map((e) => e.data.date));
+
+const now = new Date();
+const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+const academicMonths = [
+  { year: 2026, month: 3 },  // April
+  { year: 2026, month: 4 },  // May
+  { year: 2026, month: 5 },  // June
+  { year: 2026, month: 6 },  // July
+  { year: 2026, month: 7 },  // August
+  { year: 2026, month: 8 },  // September
+  { year: 2026, month: 9 },  // October
+  { year: 2026, month: 10 }, // November
+  { year: 2026, month: 11 }, // December
+  { year: 2027, month: 0 },  // January
+  { year: 2027, month: 1 },  // February
+  { year: 2027, month: 2 },  // March
+];
+---
+
+<BaseLayout title="Calendar — Daily Teacher Diary 2026-27">
+  <h1 class="page-title">📅 Academic Year Calendar 2026-27</h1>
+
+  <div class="calendar-year">
+    {academicMonths.map(({ year, month }) => (
+      <CalendarGrid
+        year={year}
+        month={month}
+        entryDates={entryDates}
+        today={todayStr}
+      />
+    ))}
+  </div>
+</BaseLayout>

@@ -1,0 +1,56 @@
+content:
+  - name: diary
+    label: Diary Entries
+    path: src/content/diary
+    type: collection
+    filename: '{fields.date}.md'
+    view:
+      fields: [date, day, title]
+      primary: title
+      sort: date
+    fields:
+      - name: title
+        label: Title
+        type: string
+      - name: date
+        label: Date
+        type: date
+      - name: day
+        label: Day of Week
+        type: select
+        options:
+          - Monday
+          - Tuesday
+          - Wednesday
+          - Thursday
+          - Friday
+          - Saturday
+      - name: periods
+        label: Periods
+        type: object
+        list: true
+        fields:
+          - name: period
+            label: Period No.
+            type: number
+          - name: class_name
+            label: Class
+            type: string
+          - name: subject
+            label: Subject
+            type: string
+          - name: topic
+            label: Topic Covered
+            type: string
+          - name: remarks
+            label: Remarks
+            type: string
+      - name: homework_given
+        label: Homework Given
+        type: string
+      - name: general_notes
+        label: General Notes
+        type: rich-text
+      - name: body
+        label: Additional Notes
+        type: rich-text

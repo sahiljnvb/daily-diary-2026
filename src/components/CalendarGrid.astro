@@ -1,0 +1,68 @@
+---
+interface Props {
+  year: number;
+  month: number; // 0-indexed (0=Jan, 11=Dec)
+  entryDates: Set<string>;
+  today?: string; // YYYY-MM-DD
+}
+
+const { year, month, entryDates, today = '' } = Astro.props;
+
+const monthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const firstDay = new Date(year, month, 1).getDay();
+const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+const monthStr = String(month + 1).padStart(2, '0');
+const monthSlug = `${year}-${monthStr}`;
+---
+
+<div class="calendar-month">
+  <div class="calendar-month-header">
+    <a href={`${import.meta.env.BASE_URL}monthly/${monthSlug}/`}>
+      {monthNames[month]} {year}
+    </a>
+  </div>
+  <div class="calendar-weekdays">
+    {dayLabels.map((d) => (
+      <div class="calendar-weekday">{d}</div>
+    ))}
+  </div>
+  <div class="calendar-days">
+    {/* Empty cells before first day */}
+    {Array.from({ length: firstDay }).map(() => (
+      <div class="calendar-day empty"></div>
+    ))}
+    {/* Day cells */}
+    {Array.from({ length: daysInMonth }).map((_, i) => {
+      const day = i + 1;
+      const dateStr = `${year}-${monthStr}-${String(day).padStart(2, '0')}`;
+      const dayOfWeek = new Date(year, month, day).getDay();
+      const isWeekend = dayOfWeek === 0; // Sunday
+      const hasEntry = entryDates.has(dateStr);
+      const isToday = dateStr === today;
+      
+      const classes = [
+        'calendar-day',
+        isWeekend && 'weekend',
+        hasEntry && 'has-entry',
+        isToday && 'today',
+      ].filter(Boolean).join(' ');
+
+      return (
+        <div class={classes}>
+          {hasEntry ? (
+            <a href={`${import.meta.env.BASE_URL}diary/${dateStr}/`}>{day}</a>
+          ) : (
+            day
+          )}
+        </div>
+      );
+    })}
+  </div>
+</div>

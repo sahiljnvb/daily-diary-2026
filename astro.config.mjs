@@ -1,0 +1,9 @@
+// @ts-check
+import { defineConfig } from 'astro/config';
+
+// https://astro.build/config
+export default defineConfig({
+  site: 'https://kabirpathshala.github.io',
+  base: '/daily-diary-2026',
+  output: 'static',
+});

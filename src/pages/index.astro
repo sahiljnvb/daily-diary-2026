@@ -1,0 +1,118 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CalendarGrid from '../components/CalendarGrid.astro';
+import { getCollection } from 'astro:content';
+
+const allEntries = await getCollection('diary');
+const entryDates = new Set(allEntries.map((e) => e.data.date));
+
+// Academic year months: April 2026 – March 2027
+const academicMonths = [
+  { year: 2026, month: 3 },  // April
+  { year: 2026, month: 4 },  // May
+  { year: 2026, month: 5 },  // June
+  { year: 2026, month: 6 },  // July
+  { year: 2026, month: 7 },  // August
+  { year: 2026, month: 8 },  // September
+  { year: 2026, month: 9 },  // October
+  { year: 2026, month: 10 }, // November
+  { year: 2026, month: 11 }, // December
+  { year: 2027, month: 0 },  // January
+  { year: 2027, month: 1 },  // February
+  { year: 2027, month: 2 },  // March
+];
+
+// Current month
+const now = new Date();
+const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+// Find current academic month index
+const currentMonthIdx = academicMonths.findIndex(
+  (m) => m.year === now.getFullYear() && m.month === now.getMonth()
+);
+
+// Stats
+const totalEntries = allEntries.length;
+const currentMonthEntries = allEntries.filter((e) => {
+  const d = new Date(e.data.date);
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}).length;
+
+const totalPeriods = allEntries.reduce((sum, e) => sum + (e.data.periods?.length || 0), 0);
+
+// Get latest entries for quick access
+const latestEntries = allEntries
+  .sort((a, b) => b.data.date.localeCompare(a.data.date))
+  .slice(0, 5);
+
+const monthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+---
+
+<BaseLayout title="Daily Teacher Diary 2026-27 — Home">
+  <h1 class="page-title">📖 Daily Teacher Diary — Dashboard</h1>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-number">{totalEntries}</div>
+      <div class="stat-label">Total Entries</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">{currentMonthEntries}</div>
+      <div class="stat-label">This Month</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">{totalPeriods}</div>
+      <div class="stat-label">Periods Logged</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">{academicMonths.length}</div>
+      <div class="stat-label">Months in Year</div>
+    </div>
+  </div>
+
+  <!-- Current Month Calendar -->
+  {currentMonthIdx >= 0 && (
+    <section style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--color-text-light);">📅 Current Month</h2>
+      <div class="calendar-year" style="grid-template-columns: 1fr; max-width: 350px;">
+        <CalendarGrid
+          year={academicMonths[currentMonthIdx].year}
+          month={academicMonths[currentMonthIdx].month}
+          entryDates={entryDates}
+          today={todayStr}
+        />
+      </div>
+    </section>
+  )}
+
+  <!-- Recent Entries -->
+  {latestEntries.length > 0 && (
+    <section>
+      <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--color-text-light);">📝 Recent Entries</h2>
+      <ul class="monthly-list">
+        {latestEntries.map((entry) => (
+          <li>
+            <a href={`${import.meta.env.BASE_URL}diary/${entry.data.date}/`}>
+              <div class="entry-date">{entry.data.title}</div>
+              <div class="entry-summary">
+                {entry.data.periods ? `${entry.data.periods.length} period(s) logged` : 'No periods logged'}
+                {entry.data.general_notes ? ` · ${entry.data.general_notes.substring(0, 60)}...` : ''}
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  {latestEntries.length === 0 && (
+    <div class="empty-state">
+      <div class="empty-state-icon">📝</div>
+      <p>No diary entries yet. Start adding entries via Pages CMS or by creating Markdown files in <code>src/content/diary/</code>.</p>
+    </div>
+  )}
+</BaseLayout>
