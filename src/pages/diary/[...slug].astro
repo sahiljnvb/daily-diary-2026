@@ -6,34 +6,62 @@ import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
   const entries = await getCollection('diary');
-  
-  // Sort by date
-  const sorted = entries.sort((a, b) => a.data.date.localeCompare(b.data.date));
+  const entryMap = new Map(entries.map((e) => [e.data.date, e]));
 
-  return sorted.map((entry, index) => {
-    const prev = sorted[index - 1];
-    const next = sorted[index + 1];
+  // Generate all 365 days of academic year: 2026-04-01 to 2027-03-31
+  const days: { dateStr: string; dayName: string; formattedDate: string }[] = [];
+  const current = new Date(2026, 3, 1); // 2026-04-01
+  const end = new Date(2027, 2, 31);   // 2027-03-31
+
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  while (current <= end) {
+    const y = current.getFullYear();
+    const m = String(current.getMonth() + 1).padStart(2, '0');
+    const d = String(current.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+    const dayName = dayNames[current.getDay()];
+    const formattedDate = `${dayName}, ${current.getDate()} ${monthNames[current.getMonth()]} ${y}`;
+
+    days.push({ dateStr, dayName, formattedDate });
+    current.setDate(current.getDate() + 1);
+  }
+
+  return days.map((dayInfo, index) => {
+    const entry = entryMap.get(dayInfo.dateStr) || null;
+    const prevDay = days[index - 1];
+    const nextDay = days[index + 1];
 
     return {
-      params: { slug: entry.data.date },
+      params: { slug: dayInfo.dateStr },
       props: {
+        dateStr: dayInfo.dateStr,
+        dayName: dayInfo.dayName,
+        formattedDate: dayInfo.formattedDate,
         entry,
-        prevDate: prev?.data.date,
-        prevTitle: prev?.data.title,
-        nextDate: next?.data.date,
-        nextTitle: next?.data.title,
+        prevDate: prevDay?.dateStr,
+        prevTitle: prevDay?.formattedDate,
+        nextDate: nextDay?.dateStr,
+        nextTitle: nextDay?.formattedDate,
       },
     };
   });
 }
 
-const { entry, prevDate, prevTitle, nextDate, nextTitle } = Astro.props;
-const { Content } = await entry.render();
+const { dateStr, dayName, formattedDate, entry, prevDate, prevTitle, nextDate, nextTitle } = Astro.props;
 
-
+let RenderedContent = null;
+if (entry) {
+  const rendered = await entry.render();
+  RenderedContent = rendered.Content;
+}
 ---
 
-<BaseLayout title={`${entry.data.title} — Daily Teacher Diary`}>
+<BaseLayout title={`${entry ? entry.data.title : formattedDate} — Daily Teacher Diary`}>
   <Navigation
     prevDate={prevDate}
     prevTitle={prevTitle}
@@ -41,25 +69,55 @@ const { Content } = await entry.render();
     nextTitle={nextTitle}
   />
 
-  <DiaryEntry
-    title={entry.data.title}
-    date={entry.data.date}
-    day={entry.data.day}
-    periods={entry.data.periods}
-    homework_given={entry.data.homework_given}
-    general_notes={entry.data.general_notes}
-  />
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+    <h2 style="font-size: 1.25rem; color: var(--color-primary-dark); margin: 0;">
+      {formattedDate}
+    </h2>
+    <a
+      href={`${import.meta.env.BASE_URL}editor/?date=${dateStr}`}
+      style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; background: var(--color-primary); color: #fff; border-radius: var(--radius); font-weight: 600; font-size: 0.85rem; text-decoration: none; box-shadow: var(--shadow-sm);"
+    >
+      {entry ? '✏️ Edit This Entry' : '✍️ Write Entry for this Day'}
+    </a>
+  </div>
 
-  {entry.body && entry.body.trim().length > 0 && (
-    <div class="diary-entry" style="margin-top: 0; border-top: none;">
-      <div class="diary-entry-body">
-        <div class="notes-section" style="border-top: none; margin-top: 0; padding-top: 0;">
-          <h3>📓 Additional Notes</h3>
-          <div class="prose">
-            <Content />
+  {entry ? (
+    <>
+      <DiaryEntry
+        title={entry.data.title}
+        date={entry.data.date}
+        day={entry.data.day}
+        periods={entry.data.periods}
+        homework_given={entry.data.homework_given}
+        general_notes={entry.data.general_notes}
+      />
+
+      {entry.body && entry.body.trim().length > 0 && RenderedContent && (
+        <div class="diary-entry" style="margin-top: 0; border-top: none;">
+          <div class="diary-entry-body">
+            <div class="notes-section" style="border-top: none; margin-top: 0; padding-top: 0;">
+              <h3>📓 Additional Notes</h3>
+              <div class="prose">
+                <RenderedContent />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+    </>
+  ) : (
+    <div class="diary-entry" style="text-align: center; padding: 3rem 1.5rem;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
+      <h3 style="font-size: 1.2rem; margin-bottom: 0.5rem; color: var(--color-text);">No Entry Recorded Yet</h3>
+      <p style="color: var(--color-text-light); max-width: 450px; margin: 0 auto 1.5rem; font-size: 0.95rem;">
+        You haven't added any teaching logs for <strong>{formattedDate}</strong>. Click below to write period details, topic covered, and notes.
+      </p>
+      <a
+        href={`${import.meta.env.BASE_URL}editor/?date=${dateStr}`}
+        style="display: inline-block; padding: 0.75rem 1.75rem; background: var(--color-primary); color: #fff; border-radius: var(--radius-lg); font-weight: 700; font-size: 1rem; text-decoration: none; box-shadow: var(--shadow-md);"
+      >
+        ✍️ Write Diary for {dateStr}
+      </a>
     </div>
   )}
 
