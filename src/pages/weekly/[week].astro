@@ -1,0 +1,477 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import { getAcademicWeeks } from '../../utils/weeks';
+
+export async function getStaticPaths() {
+  const weeks = getAcademicWeeks();
+  const allEntries = await getCollection('diary');
+  const entryMap = new Map(allEntries.map((e) => [e.data.date, e]));
+
+  return weeks.map((week, index) => {
+    const prevWeek = weeks[index - 1];
+    const nextWeek = weeks[index + 1];
+
+    const weekEntries = week.days.map((day) => ({
+      dayInfo: day,
+      entry: entryMap.get(day.dateStr) || null,
+    }));
+
+    return {
+      params: { week: week.weekId },
+      props: {
+        week,
+        weekEntries,
+        prevWeekId: prevWeek?.weekId,
+        prevWeekLabel: prevWeek?.label,
+        nextWeekId: nextWeek?.weekId,
+        nextWeekLabel: nextWeek?.label,
+      },
+    };
+  });
+}
+
+const { week, weekEntries, prevWeekId, prevWeekLabel, nextWeekId, nextWeekLabel } = Astro.props;
+
+// Calculate stats for this week
+let totalPeriodsThisWeek = 0;
+const classesSet = new Set<string>();
+
+weekEntries.forEach(({ entry }) => {
+  if (entry && entry.data.periods) {
+    totalPeriodsThisWeek += entry.data.periods.length;
+    entry.data.periods.forEach((p) => {
+      if (p.class_name) classesSet.add(p.class_name);
+    });
+  }
+});
+---
+
+<BaseLayout title={`${week.label} — Weekly Diary Report`}>
+  <!-- Non-Printing Navigation & Action Bar -->
+  <div class="no-print" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--color-surface); padding: 1rem 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm);">
+      <div>
+        <div style="font-size: 0.8rem; color: var(--color-text-light); text-transform: uppercase; font-weight: 600;">
+          Weekly Report &bull; {week.monthLabel}
+        </div>
+        <h1 style="font-size: 1.3rem; color: var(--color-primary-dark); margin: 0.1rem 0 0;">
+          {week.label}
+        </h1>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+        <a
+          href={`${import.meta.env.BASE_URL}weekly/`}
+          style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.5rem 0.9rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); font-size: 0.85rem; font-weight: 600; text-decoration: none;"
+        >
+          📋 All Weeks
+        </a>
+        <button
+          type="button"
+          onclick="window.print()"
+          style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.25rem; background: #16a34a; color: #fff; border: none; border-radius: var(--radius); font-size: 0.95rem; font-weight: 700; cursor: pointer; box-shadow: var(--shadow-sm);"
+        >
+          🖨️ Print / Save as PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Helpful Tip -->
+    <div style="margin-top: 0.75rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius); padding: 0.6rem 1rem; font-size: 0.85rem; color: #1e40af; display: flex; align-items: center; gap: 0.5rem;">
+      <span>💡</span>
+      <span><strong>To save as PDF:</strong> Click the green button above, and in the printer destination dropdown select <strong>"Save as PDF"</strong>.</span>
+    </div>
+
+    <!-- Week Navigation -->
+    <div class="diary-nav" style="margin-top: 1rem; margin-bottom: 0;">
+      {prevWeekId ? (
+        <a href={`${import.meta.env.BASE_URL}weekly/${prevWeekId}/`}>
+          ← {prevWeekLabel}
+        </a>
+      ) : <span></span>}
+      <div class="nav-spacer"></div>
+      {nextWeekId ? (
+        <a href={`${import.meta.env.BASE_URL}weekly/${nextWeekId}/`}>
+          {nextWeekLabel} →
+        </a>
+      ) : <span></span>}
+    </div>
+  </div>
+
+  <!-- Printable Weekly Report Document -->
+  <div class="weekly-report-doc">
+    <!-- Official Report Header -->
+    <div class="report-header">
+      <div class="report-badge">ACADEMIC YEAR 2026-27</div>
+      <h2 class="report-title">TEACHER'S WEEKLY DIARY & LESSON LOG REPORT</h2>
+      <div class="report-meta-grid">
+        <div><strong>Teacher:</strong> Aftab Ahmed</div>
+        <div><strong>Subject:</strong> English</div>
+        <div><strong>Week:</strong> {week.startDate} to {week.endDate} (Mon – Sat)</div>
+        <div><strong>Week No:</strong> #{week.weekNumber}</div>
+      </div>
+    </div>
+
+    <!-- Day-by-Day (Monday to Saturday) -->
+    <div class="weekly-days-container">
+      {weekEntries.map(({ dayInfo, entry }) => (
+        <div class="report-day-block">
+          <div class="report-day-header">
+            <span class="day-title">{dayInfo.formattedDate}</span>
+            {entry ? (
+              <span class="status-pill status-logged">Logged ({entry.data.periods?.length || 0} periods)</span>
+            ) : (
+              <span class="status-pill status-blank">No Entry Logged</span>
+            )}
+          </div>
+
+          {entry && entry.data.periods && entry.data.periods.length > 0 ? (
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th style="width: 55px; text-align: center;">Period</th>
+                  <th style="width: 80px;">Class</th>
+                  <th style="width: 100px;">Subject</th>
+                  <th>Topic / Concepts Taught</th>
+                  <th style="width: 220px;">Remarks / Learning Outcomes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entry.data.periods.map((p) => (
+                  <tr>
+                    <td style="text-align: center; font-weight: bold;">{p.period}</td>
+                    <td>{p.class_name || '—'}</td>
+                    <td>{p.subject || 'English'}</td>
+                    <td>{p.topic || '—'}</td>
+                    <td>{p.remarks || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div class="blank-grid">
+              <div class="blank-grid-row">
+                <span class="blank-cell-num">1</span>
+                <span class="blank-cell-line"></span>
+              </div>
+              <div class="blank-grid-row">
+                <span class="blank-cell-num">2</span>
+                <span class="blank-cell-line"></span>
+              </div>
+              <div class="blank-grid-row">
+                <span class="blank-cell-num">3</span>
+                <span class="blank-cell-line"></span>
+              </div>
+            </div>
+          )}
+
+          <!-- Homework & Notes sub-row -->
+          {(entry?.data.homework_given || entry?.data.general_notes) && (
+            <div class="report-subnotes">
+              {entry.data.homework_given && (
+                <div>
+                  <strong>📝 Homework:</strong> {entry.data.homework_given}
+                </div>
+              )}
+              {entry.data.general_notes && (
+                <div>
+                  <strong>📌 Notes:</strong> {entry.data.general_notes}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+
+    <!-- Weekly Summary & Signatures Section -->
+    <div class="report-footer-section">
+      <div class="report-summary-box">
+        <div><strong>Total Periods Logged:</strong> {totalPeriodsThisWeek}</div>
+        <div><strong>Classes Covered:</strong> {classesSet.size > 0 ? Array.from(classesSet).join(', ') : 'None'}</div>
+        <div><strong>Report Generated:</strong> Academic Session 2026-27</div>
+      </div>
+
+      <div class="signature-grid">
+        <div class="sig-box">
+          <div class="sig-line"></div>
+          <div class="sig-title">Teacher's Signature</div>
+          <div class="sig-date">Date: _______________</div>
+        </div>
+        <div class="sig-box">
+          <div class="sig-line"></div>
+          <div class="sig-title">Principal / Vice-Principal Signature</div>
+          <div class="sig-date">Date & Seal: _______________</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .weekly-report-doc {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  .report-header {
+    text-align: center;
+    border-bottom: 2px solid #1e3a8a;
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .report-badge {
+    display: inline-block;
+    background: #1e3a8a;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+  }
+
+  .report-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0.2rem 0 0.8rem;
+    letter-spacing: -0.01em;
+  }
+
+  .report-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.5rem 1rem;
+    font-size: 0.85rem;
+    color: #334155;
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+  }
+
+  .weekly-days-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .report-day-block {
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius);
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-day-header {
+    background: #f1f5f9;
+    padding: 0.5rem 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #cbd5e1;
+  }
+
+  .day-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #0f172a;
+  }
+
+  .status-pill {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+  }
+
+  .status-logged {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .status-blank {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+
+  .report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .report-table th {
+    background: #f8fafc;
+    color: #475569;
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid #cbd5e1;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+
+  .report-table td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+    font-size: 0.85rem;
+  }
+
+  .report-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .blank-grid {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .blank-grid-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .blank-cell-num {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    width: 20px;
+    text-align: center;
+  }
+
+  .blank-cell-line {
+    flex: 1;
+    border-bottom: 1px dashed #cbd5e1;
+    height: 18px;
+  }
+
+  .report-subnotes {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    color: #334155;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .report-footer-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #1e3a8a;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-summary-box {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 1rem;
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    font-size: 0.85rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .signature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    padding: 0 1rem;
+  }
+
+  .sig-box {
+    text-align: center;
+  }
+
+  .sig-line {
+    border-bottom: 1.5px solid #334155;
+    margin-bottom: 0.5rem;
+    height: 40px;
+  }
+
+  .sig-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #1e293b;
+  }
+
+  .sig-date {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+  }
+
+  /* Print Optimization */
+  @media print {
+    .no-print,
+    .site-header,
+    .site-footer {
+      display: none !important;
+    }
+
+    body {
+      background: #fff !important;
+      color: #000 !important;
+      font-size: 9.5pt;
+    }
+
+    .site-main {
+      max-width: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    .weekly-report-doc {
+      border: none !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+    }
+
+    .report-day-block {
+      border: 1px solid #475569 !important;
+      margin-bottom: 0.6rem;
+    }
+
+    .report-day-header {
+      background: #e2e8f0 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      padding: 0.3rem 0.6rem !important;
+    }
+
+    .report-table th,
+    .report-table td {
+      border: 1px solid #94a3b8 !important;
+      padding: 0.35rem 0.5rem !important;
+    }
+
+    .report-badge {
+      background: #000 !important;
+      color: #fff !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .signature-grid {
+      margin-top: 2rem;
+    }
+  }
+</style>

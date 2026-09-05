@@ -54,6 +54,19 @@ const monthNames = [
 <BaseLayout title="Daily Teacher Diary 2026-27 — Home">
   <h1 class="page-title">📖 Daily Teacher Diary — Dashboard</h1>
 
+  <!-- Quick Action Buttons -->
+  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+    <a href={`${import.meta.env.BASE_URL}editor/`} style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.25rem; background: var(--color-primary); color: #fff; border-radius: var(--radius); font-weight: 700; font-size: 0.9rem; text-decoration: none; box-shadow: var(--shadow-sm);">
+      ✍️ Write / Edit Diary
+    </a>
+    <a href={`${import.meta.env.BASE_URL}weekly/`} style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.25rem; background: #16a34a; color: #fff; border-radius: var(--radius); font-weight: 700; font-size: 0.9rem; text-decoration: none; box-shadow: var(--shadow-sm);">
+      🖨️ Weekly PDF Reports (Mon – Sat)
+    </a>
+    <a href={`${import.meta.env.BASE_URL}calendar/`} style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.25rem; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text); border-radius: var(--radius); font-weight: 600; font-size: 0.9rem; text-decoration: none;">
+      📅 Academic Calendar
+    </a>
+  </div>
+
   <!-- Stats -->
   <div class="stats-grid">
     <div class="stat-card">
